@@ -1,0 +1,49 @@
+name: hanserLIVE 动态监控
+on:
+  schedule:
+    - cron: '9,39 * * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: check 仅检查网站；test-email 测试邮件；monitor 检查并通知
+        required: true
+        default: check
+        type: choice
+        options:
+          - check
+          - test-email
+          - monitor
+permissions:
+  contents: write
+concurrency:
+  group: hanser-monitor
+  cancel-in-progress: false
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 检查动态或发送邮件
+        env:
+          WATCH_MODE: ${{ inputs.mode || 'monitor' }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          SMTP_HOST: smtp.qq.com
+          SMTP_PORT: '465'
+        run: python monitor.py --mode "$WATCH_MODE"
+      - name: 保存去重状态
+        run: |
+          if [ -f state.json ]; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add state.json
+            if ! git diff --cached --quiet; then
+              git commit -m 'Save monitor state [skip ci]'
+              git push
+            fi
+          fi
