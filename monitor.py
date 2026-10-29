@@ -211,6 +211,8 @@ def monitor(path):
     for number in range(1, 101):
         batch = page(number)
         if not batch:
+            if number == 1:
+                raise RuntimeError("Empty first page; refusing to treat it as no new posts")
             break
         for post in batch:
             if post["id"] not in previous:

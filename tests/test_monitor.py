@@ -53,6 +53,16 @@ class MonitorTests(unittest.TestCase):
                     m.monitor(path)
             self.assertEqual(path.read_text(), initial)
 
+    def test_empty_first_page_is_a_failure(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "state.json"
+            self.baseline(path)
+            initial = path.read_text()
+            with patch.object(m, "config"), patch.object(m, "page", return_value=[]):
+                with self.assertRaises(RuntimeError):
+                    m.monitor(path)
+            self.assertEqual(path.read_text(), initial)
+
     def test_pagination_ignores_pinned_known_item(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "state.json"
